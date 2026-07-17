@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flashcards</title>
+<style>
+  :root {
+    --ink: #1c2433;
+    --ink-soft: #4a5468;
+    --ground: #f4f6f2;
+    --card-paper: #fdfdf9;
+    --card-line: #b9cfe8;
+    --margin-red: #e2798a;
+    --hi: #ffde59;
+    --hi-ink: #1c2433;
+    --edge: #d8dcd2;
+    --folder: #f3d9a4;
+    --folder-edge: #dfc287;
+    --folder-ink: #4a3d20;
+    --shadow: 0 10px 30px rgba(28, 36, 51, 0.14);
+    --danger: #c4485c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e7eaf1;
+      --ink-soft: #9aa4b8;
+      --ground: #141924;
+      --card-paper: #e9e9df;
+      --card-line: #9db4d4;
+      --margin-red: #d4808f;
+      --edge: #2a3245;
+      --folder: #c9a95e;
+      --folder-edge: #a8894a;
+      --folder-ink: #2b2210;
+      --shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+      --danger: #e07082;
+    }
+  }
+  :root[data-theme="light"] {
+    --ink: #1c2433;
+    --ink-soft: #4a5468;
+    --ground: #f4f6f2;
+    --card-paper: #fdfdf9;
+    --card-line: #b9cfe8;
+    --margin-red: #e2798a;
+    --edge: #d8dcd2;
+    --folder: #f3d9a4;
+    --folder-edge: #dfc287;
+    --folder-ink: #4a3d20;
+    --shadow: 0 10px 30px rgba(28, 36, 51, 0.14);
+    --danger: #c4485c;
+  }
+  :root[data-theme="dark"] {
+    --ink: #e7eaf1;
+    --ink-soft: #9aa4b8;
+    --ground: #141924;
+    --card-paper: #e9e9df;
+    --card-line: #9db4d4;
+    --margin-red: #d4808f;
+    --edge: #2a3245;
+    --folder: #c9a95e;
+    --folder-edge: #a8894a;
+    --folder-ink: #2b2210;
+    --shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+    --danger: #e07082;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hand {
+    font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  }
+
+  .app {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-height: 100%;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .wordmark h1 {
+    font-size: 1.35rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .wordmark h1 mark {
+    background: linear-gradient(transparent 42%, var(--hi) 42%, var(--hi) 92%, transparent 92%);
+    color: inherit;
+    padding: 0 2px;
+  }
+  .crumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    min-width: 0;
+  }
+  .crumb .sep { opacity: 0.5; }
+  .crumb .deck-name {
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+  }
+  .back-link {
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .back-link:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+
+  .mode-switch {
+    display: flex;
+    gap: 6px;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    border-radius: 999px;
+    padding: 4px;
+  }
+  .mode-switch button {
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 7px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .mode-switch button[aria-pressed="true"] {
+    background: var(--hi);
+    color: var(--hi-ink);
+  }
+  button:focus-visible, textarea:focus-visible, input:focus-visible {
+    outline: 2px solid var(--margin-red);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Decks (home) ---------- */
+  .decks-home {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .decks-intro {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  .new-deck {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .new-deck input {
+    flex: 1;
+    min-width: 200px;
+    border: 1.5px solid var(--edge);
+    border-radius: 10px;
+    background: var(--card-paper);
+    color: #1c2433;
+    padding: 11px 16px;
+    font: inherit;
+    font-size: 1rem;
+  }
+  .new-deck input::placeholder { color: #8b93a5; }
+
+  .deck-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .folder {
+    position: relative;
+    margin-top: 14px;
+  }
+  .folder-open {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--folder-edge);
+    background: var(--folder);
+    color: var(--folder-ink);
+    border-radius: 4px 10px 10px 10px;
+    padding: 18px 16px 14px;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(28, 36, 51, 0.12);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .folder-open:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(28, 36, 51, 0.18);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .folder-open, .folder-open:hover { transition: none; transform: none; }
+  }
+  /* folder tab */
+  .folder-open::before {
+    content: "";
+    position: absolute;
+    top: -13px;
+    left: 0;
+    width: 44%;
+    max-width: 110px;
+    height: 14px;
+    background: var(--folder);
+    border: 1px solid var(--folder-edge);
+    border-bottom: 0;
+    border-radius: 8px 14px 0 0;
+  }
+  .folder-name {
+    display: block;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    word-wrap: break-word;
+    padding-right: 26px;
+  }
+  .folder-meta {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.82rem;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+  }
+  .folder .remove {
+    position: absolute;
+    top: 8px; right: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--folder-ink);
+    opacity: 0.55;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 5px 7px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .folder .remove:hover { opacity: 1; background: rgba(196, 72, 92, 0.15); color: var(--danger); }
+  .folder .remove.confirming {
+    opacity: 1;
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .decks-empty {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    border: 1.5px dashed var(--edge);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+  }
+
+  /* ---------- Create mode ---------- */
+  .creator {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .card-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .card-form { grid-template-columns: 1fr; }
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .field textarea {
+    resize: none;
+    border: 1.5px solid var(--edge);
+    border-radius: 10px;
+    background: var(--card-paper);
+    color: #1c2433;
+    padding: 14px 16px;
+    min-height: 110px;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      color-mix(in srgb, var(--card-line) 55%, transparent) 27px,
+      color-mix(in srgb, var(--card-line) 55%, transparent) 28px
+    );
+    background-attachment: local;
+  }
+  .field textarea::placeholder { color: #8b93a5; font-family: "Segoe UI", system-ui, sans-serif; font-size: 0.95rem; }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 11px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--hi);
+    color: var(--hi-ink);
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--hi-ink) 30%, var(--hi));
+  }
+  .btn-primary:active { transform: translateY(1px); box-shadow: none; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--edge);
+    font-weight: 600;
+  }
+  .hint {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+  }
+  kbd {
+    font-family: inherit;
+    border: 1px solid var(--edge);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.78rem;
+  }
+
+  .deck-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .deck-item {
+    position: relative;
+    background: var(--card-paper);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+    padding: 12px 14px 12px 22px;
+    color: #1c2433;
+    box-shadow: 0 2px 6px rgba(28, 36, 51, 0.08);
+    overflow: hidden;
+  }
+  .deck-item::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 12px;
+    width: 1.5px;
+    background: color-mix(in srgb, var(--margin-red) 70%, transparent);
+  }
+  .deck-item .q {
+    font-size: 0.98rem;
+    line-height: 1.35;
+    margin: 0 0 6px;
+    word-wrap: break-word;
+  }
+  .deck-item .a {
+    font-size: 0.85rem;
+    color: #5a6478;
+    margin: 0;
+    word-wrap: break-word;
+  }
+  .deck-item .remove {
+    position: absolute;
+    top: 6px; right: 6px;
+    border: 0;
+    background: transparent;
+    color: #8b93a5;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 5px 7px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .deck-item .remove:hover { color: var(--danger); background: rgba(196, 72, 92, 0.1); }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 12px;
+  }
+
+  /* ---------- Study mode ---------- */
+  .study {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 26px;
+    padding-top: 8px;
+  }
+  .progress {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  .progress strong { color: var(--ink); }
+
+  .stage {
+    perspective: 1400px;
+    width: min(560px, 100%);
+    height: 340px;
+    position: relative;
+  }
+  .stage::before, .stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--card-paper);
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    z-index: 0;
+    opacity: 0.55;
+  }
+  .stage::before { transform: rotate(-2.2deg) translateY(7px); }
+  .stage::after { transform: rotate(1.6deg) translateY(4px); opacity: 0.35; }
+  .stage.empty-stack::before, .stage.empty-stack::after { display: none; }
+
+  .flip-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0.1, 0.2, 1);
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    display: block;
+    border-radius: 14px;
+  }
+  .flip-card.flipped { transform: rotateY(180deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .flip-card { transition: none; }
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--card-paper);
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    padding: 22px 28px 22px 48px;
+    color: #1c2433;
+    overflow: hidden;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 33px,
+      color-mix(in srgb, var(--card-line) 50%, transparent) 33px,
+      color-mix(in srgb, var(--card-line) 50%, transparent) 34px
+    );
+  }
+  .face::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 34px;
+    width: 1.5px;
+    background: color-mix(in srgb, var(--margin-red) 75%, transparent);
+  }
+  .face.back { transform: rotateY(180deg); }
+  .face .tag {
+    align-self: flex-start;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #5a6478;
+    background: color-mix(in srgb, var(--hi) 60%, transparent);
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+  .face.back .tag { background: color-mix(in srgb, var(--card-line) 45%, transparent); }
+  .face .text {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(1.2rem, 3.4vw, 1.7rem);
+    line-height: 1.45;
+    padding: 8px 4px;
+    overflow-y: auto;
+    word-break: break-word;
+  }
+  .face .corner-hint {
+    align-self: flex-end;
+    font-size: 0.75rem;
+    color: #8b93a5;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+
+  .study-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .nav-btn {
+    border: 1.5px solid var(--edge);
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.15rem;
+    line-height: 1;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .nav-btn:hover:not(:disabled) { border-color: var(--ink-soft); }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+  .study-empty {
+    text-align: center;
+    color: var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  .study-empty p { margin: 0; font-size: 1.05rem; }
+
+  .keys-hint {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+  @media (max-width: 640px) {
+    .keys-hint { display: none; }
+    .stage { height: 300px; }
+    .face { padding-left: 40px; }
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="wordmark">
+      <h1><mark>Flashcards</mark></h1>
+      <span class="crumb hidden" id="crumb">
+        <span class="sep">/</span>
+        <span class="deck-name" id="crumbName"></span>
+      </span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="back-link hidden" id="backToDecks">← All subjects</button>
+      <nav class="mode-switch hidden" aria-label="Mode" id="modeSwitch">
+        <button id="tabCreate" aria-pressed="true">Create</button>
+        <button id="tabStudy" aria-pressed="false">Study</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- DECKS HOME -->
+  <section class="decks-home" id="decksView">
+    <p class="decks-intro">Keep each subject in its own folder — math, history, vocabulary — and study them separately.</p>
+    <form class="new-deck" id="deckForm">
+      <input id="deckNameInput" placeholder="New subject, e.g. Math" maxlength="60" required />
+      <button type="submit" class="btn btn-primary">Create folder</button>
+    </form>
+    <div>
+      <p class="section-label" id="foldersLabel">Your subjects</p>
+      <ul class="deck-grid" id="deckGrid"></ul>
+      <div class="decks-empty hidden" id="decksEmpty">
+        No folders yet. Name your first subject above — its flashcards will live inside.
+      </div>
+    </div>
+  </section>
+
+  <!-- CREATE -->
+  <section class="creator hidden" id="createView">
+    <form id="cardForm">
+      <div class="card-form">
+        <div class="field">
+          <label for="frontInput">Front — question</label>
+          <textarea id="frontInput" placeholder="e.g. What is the capital of Australia?" required></textarea>
+        </div>
+        <div class="field">
+          <label for="backInput">Back — answer</label>
+          <textarea id="backInput" placeholder="e.g. Canberra" required></textarea>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">Add card</button>
+        <button type="button" class="btn btn-ghost" id="startStudy">Start studying</button>
+        <span class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> adds the card</span>
+      </div>
+    </form>
+
+    <div id="deckSection" class="hidden">
+      <p class="section-label" id="cardsLabel">Cards in this folder</p>
+      <ul class="deck-list" id="deckList"></ul>
+    </div>
+  </section>
+
+  <!-- STUDY -->
+  <section class="study hidden" id="studyView">
+    <div class="progress" id="progress"></div>
+
+    <div class="stage" id="stage">
+      <button class="flip-card" id="flipCard" aria-label="Flip card">
+        <div class="face front">
+          <span class="tag">Front</span>
+          <div class="text hand" id="frontText"></div>
+          <span class="corner-hint">click to flip</span>
+        </div>
+        <div class="face back">
+          <span class="tag">Back</span>
+          <div class="text hand" id="backText"></div>
+          <span class="corner-hint">click to flip back</span>
+        </div>
+      </button>
+      <div class="study-empty hidden" id="studyEmpty">
+        <p>This folder has no cards yet.</p>
+        <button class="btn btn-primary" id="goCreate">Create a card</button>
+      </div>
+    </div>
+
+    <div class="study-controls">
+      <button class="nav-btn" id="prevBtn" aria-label="Previous card">←</button>
+      <button class="btn btn-ghost" id="shuffleBtn">Shuffle</button>
+      <button class="nav-btn" id="nextBtn" aria-label="Next card">→</button>
+    </div>
+    <p class="keys-hint"><kbd>←</kbd> <kbd>→</kbd> to move &nbsp;·&nbsp; <kbd>Space</kbd> to flip</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var STORE_KEY = "flashcards.store.v2";
+  var OLD_KEY = "flashcards.deck.v1";
+
+  var store = { decks: [] };   // decks: [{ id, name, cards: [{front, back}] }]
+  var activeDeck = null;
+  var order = [];
+  var pos = 0;
+  var view = "decks";          // "decks" | "create" | "study"
+
+  function uid() {
+    return "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.decks)) {
+          store.decks = parsed.decks.filter(function (d) {
+            return d && d.id && d.name && Array.isArray(d.cards);
+          });
+        }
+      }
+    } catch (e) { store.decks = []; }
+
+    // migrate the old single-deck format into a folder
+    try {
+      var old = localStorage.getItem(OLD_KEY);
+      if (old) {
+        var cards = JSON.parse(old).filter(function (c) { return c && c.front && c.back; });
+        if (cards.length) {
+          store.decks.push({ id: uid(), name: "My cards", cards: cards });
+          save();
+        }
+        localStorage.removeItem(OLD_KEY);
+      }
+    } catch (e) {}
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var decksView = $("decksView"), createView = $("createView"), studyView = $("studyView");
+  var modeSwitch = $("modeSwitch"), tabCreate = $("tabCreate"), tabStudy = $("tabStudy");
+  var backToDecks = $("backToDecks"), crumb = $("crumb"), crumbName = $("crumbName");
+  var deckGrid = $("deckGrid"), decksEmpty = $("decksEmpty"), deckNameInput = $("deckNameInput");
+  var frontInput = $("frontInput"), backInput = $("backInput");
+  var deckList = $("deckList"), deckSection = $("deckSection");
+  var flipCard = $("flipCard"), stage = $("stage"), studyEmpty = $("studyEmpty");
+  var frontText = $("frontText"), backText = $("backText"), progress = $("progress");
+  var prevBtn = $("prevBtn"), nextBtn = $("nextBtn"), shuffleBtn = $("shuffleBtn");
+
+  function cards() { return activeDeck ? activeDeck.cards : []; }
+  function resetOrder() {
+    order = cards().map(function (_, i) { return i; });
+    if (pos >= order.length) pos = Math.max(0, order.length - 1);
+  }
+
+  function setView(v) {
+    view = v;
+    decksView.classList.toggle("hidden", v !== "decks");
+    createView.classList.toggle("hidden", v !== "create");
+    studyView.classList.toggle("hidden", v !== "study");
+    var inDeck = v !== "decks";
+    modeSwitch.classList.toggle("hidden", !inDeck);
+    backToDecks.classList.toggle("hidden", !inDeck);
+    crumb.classList.toggle("hidden", !inDeck);
+    if (inDeck && activeDeck) crumbName.textContent = activeDeck.name;
+    tabCreate.setAttribute("aria-pressed", String(v === "create"));
+    tabStudy.setAttribute("aria-pressed", String(v === "study"));
+    if (v === "decks") { activeDeck = null; renderDecks(); deckNameInput.focus(); }
+    if (v === "create") { renderCards(); frontInput.focus(); }
+    if (v === "study") renderStudy();
+  }
+
+  function openDeck(deck, mode) {
+    activeDeck = deck;
+    pos = 0;
+    resetOrder();
+    setView(mode || "create");
+  }
+
+  /* ---------- decks home ---------- */
+  function renderDecks() {
+    deckGrid.innerHTML = "";
+    var has = store.decks.length > 0;
+    decksEmpty.classList.toggle("hidden", has);
+    $("foldersLabel").classList.toggle("hidden", !has);
+    store.decks.forEach(function (deck) {
+      var li = document.createElement("li");
+      li.className = "folder";
+
+      var open = document.createElement("button");
+      open.type = "button";
+      open.className = "folder-open";
+      var name = document.createElement("span");
+      name.className = "folder-name";
+      name.textContent = deck.name;
+      var meta = document.createElement("span");
+      meta.className = "folder-meta";
+      meta.textContent = deck.cards.length === 1 ? "1 card" : deck.cards.length + " cards";
+      open.appendChild(name);
+      open.appendChild(meta);
+      open.addEventListener("click", function () { openDeck(deck); });
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "remove";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", "Delete folder " + deck.name);
+      var confirming = false, timer = null;
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!confirming) {
+          confirming = true;
+          del.textContent = "Sure?";
+          del.classList.add("confirming");
+          timer = setTimeout(function () {
+            confirming = false;
+            del.textContent = "✕";
+            del.classList.remove("confirming");
+          }, 3000);
+          return;
+        }
+        clearTimeout(timer);
+        var i = store.decks.indexOf(deck);
+        if (i > -1) store.decks.splice(i, 1);
+        save();
+        renderDecks();
+      });
+
+      li.appendChild(open);
+      li.appendChild(del);
+      deckGrid.appendChild(li);
+    });
+  }
+
+  $("deckForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = deckNameInput.value.trim();
+    if (!name) return;
+    var deck = { id: uid(), name: name, cards: [] };
+    store.decks.push(deck);
+    save();
+    deckNameInput.value = "";
+    openDeck(deck);
+  });
+
+  backToDecks.addEventListener("click", function () { setView("decks"); });
+
+  /* ---------- create ---------- */
+  function renderCards() {
+    var list = cards();
+    deckSection.classList.toggle("hidden", list.length === 0);
+    $("cardsLabel").textContent = "Cards in " + (activeDeck ? "“" + activeDeck.name + "”" : "this folder");
+    deckList.innerHTML = "";
+    list.forEach(function (card, i) {
+      var li = document.createElement("li");
+      li.className = "deck-item";
+      var q = document.createElement("p");
+      q.className = "q hand";
+      q.textContent = card.front;
+      var a = document.createElement("p");
+      a.className = "a";
+      a.textContent = card.back;
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "remove";
+      del.setAttribute("aria-label", "Delete card");
+      del.textContent = "✕";
+      del.addEventListener("click", function () {
+        list.splice(i, 1);
+        save(); resetOrder(); renderCards();
+      });
+      li.appendChild(del); li.appendChild(q); li.appendChild(a);
+      deckList.appendChild(li);
+    });
+  }
+
+  $("cardForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!activeDeck) return;
+    var f = frontInput.value.trim(), b = backInput.value.trim();
+    if (!f || !b) return;
+    activeDeck.cards.push({ front: f, back: b });
+    save(); resetOrder(); renderCards();
+    frontInput.value = ""; backInput.value = "";
+    frontInput.focus();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && view === "create") {
+      e.preventDefault();
+      $("cardForm").requestSubmit();
+    }
+  });
+
+  tabCreate.addEventListener("click", function () { setView("create"); });
+  tabStudy.addEventListener("click", function () { setView("study"); });
+  $("startStudy").addEventListener("click", function () { pos = 0; setView("study"); });
+  $("goCreate").addEventListener("click", function () { setView("create"); });
+
+  /* ---------- study ---------- */
+  function currentCard() {
+    var list = cards();
+    return list.length ? list[order[pos]] : null;
+  }
+
+  function renderStudy() {
+    var card = currentCard();
+    var empty = !card;
+    flipCard.classList.toggle("hidden", empty);
+    studyEmpty.classList.toggle("hidden", !empty);
+    stage.classList.toggle("empty-stack", empty);
+    prevBtn.disabled = nextBtn.disabled = shuffleBtn.disabled = empty || cards().length < 2;
+    if (empty) { progress.textContent = ""; return; }
+    // snap (don't animate) the flip reset so the next answer isn't revealed mid-turn
+    if (flipCard.classList.contains("flipped")) {
+      flipCard.style.transition = "none";
+      flipCard.classList.remove("flipped");
+      void flipCard.offsetWidth;
+      flipCard.style.transition = "";
+    }
+    frontText.textContent = card.front;
+    backText.textContent = card.back;
+    progress.innerHTML = "<strong>" + (pos + 1) + "</strong> / " + order.length;
+  }
+
+  function step(delta) {
+    if (!cards().length) return;
+    pos = (pos + delta + order.length) % order.length;
+    renderStudy();
+  }
+
+  flipCard.addEventListener("click", function () {
+    flipCard.classList.toggle("flipped");
+  });
+  prevBtn.addEventListener("click", function () { step(-1); });
+  nextBtn.addEventListener("click", function () { step(1); });
+  shuffleBtn.addEventListener("click", function () {
+    for (var i = order.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    pos = 0;
+    renderStudy();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (view !== "study" || !cards().length) return;
+    if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+    else if (e.key === " " || e.key === "Enter") {
+      if (e.target === flipCard || e.key === " ") {
+        e.preventDefault();
+        flipCard.classList.toggle("flipped");
+      }
+    }
+  });
+
+  load();
+  setView("decks");
+})();
+</script>
+
+</body>
+</html>
